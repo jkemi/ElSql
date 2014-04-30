@@ -1,0 +1,25 @@
+apply plugin: 'java'
+apply plugin: 'eclipse'
+
+version = '0.9'
+//sourceCompatibility = JavaVersion.VERSION_1_6
+//targetCompatibility = JavaVersion.VERSION_1_6
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	testCompile('org.testng:testng:[6.0,)') {
+		exclude group: 'org.yaml', module: 'snakeyaml'
+		exclude group: 'org.beanshell', module: 'bsh'
+	}
+}
+
+test {
+	useTestNG()
+
+	testLogging {
+		events "passed", "skipped", "failed"
+	}
+}

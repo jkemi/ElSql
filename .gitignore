@@ -12,3 +12,5 @@
 /dist/
 /.externalToolBuilders/
 /.settings/
+
+.gradle/
