@@ -6,6 +6,7 @@
 package com.opengamma.elsql;
 
 import java.io.BufferedReader;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -13,9 +14,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.core.io.Resource;
 import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 
 /**
@@ -52,22 +50,39 @@ public final class ElSqlBundle {
    * The config is designed to handle some, but not all, database differences.
    * Other differences should be handled by creating and using a database specific
    * override file (the first optional resource is the override file).
-   * 
+   *
    * @param config  the config, not null
    * @param type  the type, not null
    * @return the bundle, not null
+   * @throws java.io.IOException if unable to read input
    * @throws IllegalArgumentException if the input cannot be parsed
    */
-  public static ElSqlBundle of(ElSqlConfig config, Class<?> type) {
+  public static ElSqlBundle of(ElSqlConfig config, Class<?> type) throws IOException {
     if (config == null) {
       throw new IllegalArgumentException("Config must not be null");
     }
     if (type == null) {
       throw new IllegalArgumentException("Type must not be null");
     }
-    ClassPathResource baseResource = new ClassPathResource(type.getSimpleName() + ".elsql", type);
-    ClassPathResource configResource = new ClassPathResource(type.getSimpleName() + "-" + config.getName() + ".elsql", type);
-    return parse(config, baseResource, configResource);
+
+    InputStream baseResource = type.getResourceAsStream(type.getSimpleName() + ".elsql");
+	if (baseResource == null) {
+	  throw new FileNotFoundException("Resource not found: " + type.getSimpleName() + ".elsql");
+	}
+    try {
+      InputStream configResource = type.getResourceAsStream(type.getSimpleName() + "-" + config.getName() + ".elsql");
+      if (configResource != null) {
+        try {
+          return parse(config, baseResource, configResource);
+        } finally {
+          configResource.close();
+        }
+      } else {
+        return parse(config, baseResource);
+      }
+	} finally {
+		baseResource.close();
+	}
   }
 
   /**
@@ -84,7 +99,7 @@ public final class ElSqlBundle {
    * @return the external identifier, not null
    * @throws IllegalArgumentException if the input cannot be parsed
    */
-  public static ElSqlBundle parse(ElSqlConfig config, Resource... resources) {
+  public static ElSqlBundle parse(ElSqlConfig config, InputStream... resources) throws IOException {
     if (config == null) {
       throw new IllegalArgumentException("Config must not be null");
     }
@@ -94,13 +109,11 @@ public final class ElSqlBundle {
     return parseResource(resources, config);
   }
 
-  private static ElSqlBundle parseResource(Resource[] resources, ElSqlConfig config) {
+  private static ElSqlBundle parseResource(InputStream[] resources, ElSqlConfig config) throws IOException {
     List<List<String>> files = new ArrayList<List<String>>();
-    for (Resource resource : resources) {
-      if (resource.exists()) {
-        List<String> lines = loadResource(resource);
-        files.add(lines);
-      }
+    for (InputStream resource : resources) {
+      List<String> lines = loadResource(resource);
+      files.add(lines);
     }
     return parse(files, config);
   }
@@ -121,10 +134,7 @@ public final class ElSqlBundle {
     return new ElSqlBundle(parsed, config);
   }
 
-  private static List<String> loadResource(Resource resource) {
-    InputStream in = null;
-    try {
-      in = resource.getInputStream();
+  private static List<String> loadResource(InputStream in) throws IOException {
       BufferedReader reader = new BufferedReader(new InputStreamReader(in, "UTF-8"));
       List<String> list = new ArrayList<String>();
       String line = reader.readLine();
@@ -133,21 +143,11 @@ public final class ElSqlBundle {
           line = reader.readLine();
       }
       return list;
-    } catch (IOException ex) {
-      throw new RuntimeException(ex);
-    } finally {
-      try {
-        if (in != null) {
-          in.close();
-        }
-      } catch (IOException ignored) {
-      }
-    }
   }
 
   /**
    * Creates an instance..
-   * 
+   *
    * @param map  the map of names, not null
    * @param config  the config to use, not null
    */
