@@ -78,7 +78,7 @@ public class ElSqlConfig {
    * @param value  the value to check, not null
    * @return true if the value contains wildcards
    */
-  public boolean isLikeWildcard(String value) {
+  public static boolean isLikeWildcard(String value) {
     boolean escape = false;
     for (int i = 0; i < value.length(); i++) {
       char ch = value.charAt(i);

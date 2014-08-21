@@ -73,7 +73,7 @@ abstract class ConditionalSqlFragment extends ContainerSqlFragment {
     return true;
   }
 
-  protected boolean endsWith(StringBuilder buf, String match) {
+  protected static boolean endsWith(StringBuilder buf, String match) {
     String str = (buf.length() >= match.length() ? buf.substring(buf.length() - match.length()) : "");
     return str.equals(match);
   }
